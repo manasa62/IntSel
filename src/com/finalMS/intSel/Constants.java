@@ -20,7 +20,7 @@ public class Constants {
 	public static final String CUSTOM_INTENT="com.finalMS.intSel.customIntent";
 	public static final int NO_NET_ID = -1;
 	public static final int LEAST_RTT = 0;
-	public static final int MAX_THRPUT = 0;
+	public static final int MAX_THRPUT = 1;
 	
 	
 	

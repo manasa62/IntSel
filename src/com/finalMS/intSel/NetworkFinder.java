@@ -17,6 +17,9 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import org.apache.http.HttpConnection;
 
@@ -39,12 +42,14 @@ public class NetworkFinder extends IntentService {
 	private static final String TAG = "Network Finder Logs";
 	List<InfoElement> RTTList;
 	List<InfoElement> ThrputList;
+	Logger logger;
 
 	public NetworkFinder() {
 		super("FindNetworkService");
 		Log.i(TAG, "Starting Network Finder Service");
 		RTTList = new ArrayList<InfoElement>();
 		ThrputList = new ArrayList<InfoElement>();
+		initLogger();
 	}
 
 	public IBinder onBind(Intent intent) {
@@ -89,7 +94,8 @@ public class NetworkFinder extends IntentService {
 		NetworkInfo currentNetInfo = Constants.connManager
 				.getActiveNetworkInfo();
 		Log.i(TAG, "Initial Network Info: " + currentNetInfo.toString());
-
+		logger.info("Initial Network Info: " + currentNetInfo.toString());
+		
 		if (currentNetInfo.getType() == ConnectivityManager.TYPE_MOBILE) {
 
 			measure_performance();
@@ -100,7 +106,7 @@ public class NetworkFinder extends IntentService {
 			waitForActivation();
 
 		} else if (currentNetInfo.getType() == ConnectivityManager.TYPE_WIFI) {
-			
+
 			Constants.wifiMan.setWifiEnabled(true);
 			networksFound = findWifiNetworks(true);
 			Constants.wifiMan.disconnect();
@@ -128,7 +134,7 @@ public class NetworkFinder extends IntentService {
 		if (switchTo.getNetType().equals("mobile")) {
 			Constants.wifiMan.setWifiEnabled(false);
 			Constants.wifiMan.disconnect();
-			waitTillSupplicantDisconnect();
+			waitTillWifiDisabled();
 			waitForActivation();
 
 		} else {
@@ -136,8 +142,7 @@ public class NetworkFinder extends IntentService {
 			Constants.wifiMan.disconnect();
 			Constants.wifiMan.enableNetwork(switchTo.getNetID(), true);
 			Constants.wifiMan.setWifiEnabled(true);
-			while (Constants.wifiMan.getWifiState() != WifiManager.WIFI_STATE_ENABLED)
-				;
+			waitTillWifiEnabled();
 			Constants.wifiMan.reconnect();
 			if (waitTillSupplicantActive()) {
 				waitForActivation();
@@ -180,19 +185,22 @@ public class NetworkFinder extends IntentService {
 
 		else {
 			Iterator<WifiConfiguration> itr = availableNetworks.iterator();
-			/*
-			 * if (isCurrentNetworkWifi) { waitTillSupplicantActive(); WifiInfo
-			 * thisWifi = Constants.wifiMan.getConnectionInfo(); thisWifiNetID =
-			 * thisWifi.getNetworkId(); Log.i(TAG, "Current Network SSID: " +
-			 * thisWifiNetID); measure_performance();
-			 * 
-			 * }
-			 */
+
+			if (isCurrentNetworkWifi) {
+				WifiInfo thisWifi = Constants.wifiMan.getConnectionInfo();
+				thisWifiNetID = thisWifi.getNetworkId();
+				Log.i(TAG, "Current Network SSID: " + thisWifiNetID);
+				logger.info("Current Network SSID: " + thisWifiNetID);
+				measure_performance();
+			}
+
 			// waitTillSupplicantActive();
 			while (itr.hasNext()) {
 				WifiConfiguration element = (WifiConfiguration) itr.next();
 				if (element.networkId != thisWifiNetID) {
 					Log.i(TAG, "Switching to " + element.SSID
+							+ " wit network ID" + element.networkId);
+					logger.info("Switching to " + element.SSID
 							+ " wit network ID" + element.networkId);
 
 					Constants.wifiMan.disconnect();
@@ -260,7 +268,7 @@ public class NetworkFinder extends IntentService {
 			Log.i(TAG, "Default message");
 
 			int cnt = 0;
-			while (cnt < 3) {
+			while (cnt < 5) {
 				if (initializeConnectionsManager()) {
 
 					findAvailableNetworks();
@@ -384,13 +392,13 @@ public class NetworkFinder extends IntentService {
 		InputStream reader = null;
 		FileOutputStream writer = null;
 		try {
-			
+
 			System.setProperty("http.keepAlive", "false");
 			Log.i(TAG, "trying to open connection");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setDefaultUseCaches(false);
-			Log.i(TAG,"Response code: "+conn.getResponseCode());
-			
+			Log.i(TAG, "Response code: " + conn.getResponseCode());
+
 			conn.connect();
 
 			reader = conn.getInputStream();
@@ -471,8 +479,14 @@ public class NetworkFinder extends IntentService {
 		return true;
 	}
 
-	private boolean waitTillSupplicantDisconnect() {
+	private boolean waitTillWifiDisabled() {
 		while (Constants.wifiMan.getWifiState() != WifiManager.WIFI_STATE_DISABLED)
+			;
+		return true;
+	}
+
+	private boolean waitTillWifiEnabled() {
+		while (Constants.wifiMan.getWifiState() != WifiManager.WIFI_STATE_ENABLED)
 			;
 		return true;
 	}
@@ -493,5 +507,23 @@ public class NetworkFinder extends IntentService {
 			Constants.wifiMan.enableNetwork(element.networkId, false);
 		}
 
+	}
+	
+	private void initLogger(){
+		Log.i(TAG,"Init logger");
+		
+		logger = Logger.getLogger(NetworkFinder.class.getName());
+		
+		FileHandler fileHandler = null;
+		try {
+			fileHandler = new FileHandler(Environment.getExternalStorageDirectory()+"/IntSelLog.log",true);
+			fileHandler.setFormatter(new SimpleFormatter());
+			Log.i(TAG,"Log File path: "+Environment.getExternalStorageDirectory()+"/IntSelLog.log");
+		} catch (IOException e) {
+			
+			e.printStackTrace();
+		}        
+		if(fileHandler != null)
+			logger.addHandler(fileHandler);
 	}
 }
