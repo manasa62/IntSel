@@ -1,5 +1,7 @@
 package com.finalMS.intSel;
 
+import java.io.InputStream;
+
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
 
@@ -19,6 +21,7 @@ public class Constants {
 	public static final int NO_NET_ID = -1;
 	public static final int LEAST_RTT = 0;
 	public static final int MAX_THRPUT = 0;
+	
 	
 	
 }

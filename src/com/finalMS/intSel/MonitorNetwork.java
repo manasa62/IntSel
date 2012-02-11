@@ -28,7 +28,7 @@ public class MonitorNetwork extends BroadcastReceiver {
 			if (intent.getIntExtra(Constants.MSG_FROM_NETWORKFINDER_TO_BR,
 					Constants.MSG_DEFAULT) == Constants.MSG_FIND_AVAILABLE_NETWORKS_DONE) {
 				Log.i(TAG, "Find network done message");
-
+				
 				/*
 				 * Intent msgIntent = new Intent(context, NetworkFinder.class);
 				 * msgIntent.putExtra(Constants.MSG_FROM_BR_TO_NETWORKFINDER,
